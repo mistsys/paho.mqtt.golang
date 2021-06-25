@@ -17,10 +17,12 @@ package mqtt
 import (
 	"crypto/tls"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/proxy"
@@ -43,7 +45,25 @@ func openConnection(uri *url.URL, tlsc *tls.Config, timeout time.Duration, heade
 	case "mqtt", "tcp":
 		allProxy := os.Getenv("all_proxy")
 		if len(allProxy) == 0 {
-			conn, err := net.DialTimeout("tcp", uri.Host, timeout)
+			// FIXME - Add top-level APIs to optionally provide the
+			// net.Dialer or dialer control function
+			d := net.Dialer{
+				Timeout: timeout,
+				Control: func(network, address string, c syscall.RawConn) error {
+					return c.Control(func(fd uintptr) {
+						// set the socket options
+						JUNOS_IP_RTBL_INDEX := 109
+						JUNOS_IRT_VAL := 1
+						err := syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, JUNOS_IP_RTBL_INDEX, JUNOS_IRT_VAL)
+						//err := syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TTL, 1)
+						if err != nil {
+							log.Println("setsocketopt: ", err)
+						}
+					})
+				},
+			}
+			conn, err := d.Dial("tcp", uri.Host)
+			//conn, err := net.DialTimeout("tcp", uri.Host, timeout)
 			if err != nil {
 				return nil, err
 			}
