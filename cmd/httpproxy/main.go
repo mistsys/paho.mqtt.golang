@@ -18,9 +18,10 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"golang.org/x/net/proxy"
 	"log"
 	"net/url"
+
+	"golang.org/x/net/proxy"
 
 	// "log"
 	"os"
@@ -29,7 +30,7 @@ import (
 	"syscall"
 	"time"
 
-	MQTT "github.com/eclipse/paho.mqtt.golang"
+	MQTT "github.com/mistsys/paho.mqtt.golang"
 )
 
 func onMessageReceived(_ MQTT.Client, message MQTT.Message) {
